@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Météo – ORPI Antony</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    /* ---- RESET SIMPLE ---- */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+      background: #111;
+      color: #fff;
+    }
+
+    /* ---- CARTE ORPI MÉTÉO ---- */
+    .orpi-meteo {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .orpi-card {
+      width: 100%;
+      max-width: 900px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      padding: 24px 32px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, #e2001a, #b00015);
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
+    }
+
+    /* COL GAUCHE : ville + température + icône */
+    .orpi-left {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .orpi-logo {
+      font-size: 14px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      opacity: 0.85;
+    }
+
+    .orpi-city {
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    .orpi-date {
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    .orpi-main {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 18px;
+    }
+
+    .orpi-icon {
+      font-size: 60px;
+      line-height: 1;
+    }
+
+    .orpi-temp-block {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .orpi-temp {
+      font-size: 52px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .orpi-condition {
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    /* COL DROITE : mini-détails */
+    .orpi-right {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+      padding-left: 16px;
+      border-left: 1px solid rgba(255, 255, 255, 0.25);
+    }
+
+    .orpi-label {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      opacity: 0.9;
+    }
+
+    .orpi-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 15px;
+      margin-top: 4px;
+    }
+
+    .orpi-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.2);
+      font-size: 13px;
+    }
+
+    .orpi-mini {
+      font-size: 14px;
+      opacity: 0.95;
+    }
+
+    @media (max-width: 700px) {
+      .orpi-card {
+        grid-template-columns: 1fr;
+      }
+      .orpi-right {
+        border-left: none;
+        border-top: 1px solid rgba(255, 255, 255, 0.25);
+        padding-left: 0;
+        padding-top: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="orpi-meteo">
+    <div class="orpi-card">
+      <!-- COLONNE GAUCHE -->
+      <div class="orpi-left">
+        <div class="orpi-logo">ORPI • Antony Agence de la Gare</div>
+        <div class="orpi-city" id="city">Antony (92160)</div>
+        <div class="orpi-date" id="dateLabel">Météo du jour</div>
+
+        <div class="orpi-main">
+          <div class="orpi-icon" id="icon">☀️</div>
+          <div class="orpi-temp-block">
+            <div class="orpi-temp" id="temp">--°C</div>
+            <div class="orpi-condition" id="condition">Chargement...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COLONNE DROITE -->
+      <div class="orpi-right">
+        <div>
+          <div class="orpi-label">Températures du jour</div>
+          <div class="orpi-row">
+            <span>Min</span>
+            <span id="tMin" class="orpi-mini">--°C</span>
+          </div>
+          <div class="orpi-row">
+            <span>Max</span>
+            <span id="tMax" class="orpi-mini">--°C</span>
+          </div>
+        </div>
+
+        <div>
+          <div class="orpi-label">Vent & ressenti</div>
+          <div class="orpi-row">
+            <span>Vent</span>
+            <span id="wind" class="orpi-mini">-- km/h</span>
+          </div>
+          <div class="orpi-row">
+            <span>Direction</span>
+            <span id="windDir" class="orpi-mini">--°</span>
+          </div>
+        </div>
+
+        <div>
+          <div class="orpi-label">Infos rapides</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;">
+            <div class="orpi-tag" id="tag1">Météo en direct</div>
+            <div class="orpi-tag" id="tag2">Mise à jour auto</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JS : appel à l’API open-meteo -->
+  <script>
+    // Coordonnées d’Antony – à adapter si besoin
+    const latitude = 48.751;
+    const longitude = 2.297;
+
+    const url =
+      "https://api.open-meteo.com/v1/forecast?latitude=" +
+      latitude +
+      "&longitude=" +
+      longitude +
+      "&current_weather=true&daily=temperature_2m_max,temperature_2m_min&timezone=Europe%2FParis";
+
+    function weatherCodeToIconAndLabel(code, isNight) {
+      // Codes Open-Meteo : simplifiés en 4 familles
+      if (code === 0)
+        return { icon: isNight ? "🌙" : "☀️", label: "Ciel dégagé" };
+      if (code === 1 || code === 2)
+        return { icon: "⛅", label: "Ciel peu nuageux" };
+      if (code === 3) return { icon: "☁️", label: "Ciel couvert" };
+      if (code >= 51 && code <= 67)
+        return { icon: "🌦️", label: "Pluie fine" };
+      if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86))
+        return { icon: "🌨️", label: "Neige" };
+      if (code >= 80 && code <= 82)
+        return { icon: "🌧️", label: "Averses de pluie" };
+      if (code >= 95)
+        return { icon: "⛈️", label: "Orages" };
+      return { icon: "🌡️", label: "Conditions variables" };
+    }
+
+    function formatDateFR(date) {
+      return date.toLocaleDateString("fr-FR", {
+        weekday: "long",
+        day: "2-digit",
+        month: "long"
+      });
+    }
+
+    function updateWidget(data) {
+      const current = data.current_weather;
+      const tMin = data.daily.temperature_2m_min[0];
+      const tMax = data.daily.temperature_2m_max[0];
+
+      const now = new Date();
+      const hour = now.getHours();
+      const isNight = hour < 7 || hour >= 21;
+
+      const iconData = weatherCodeToIconAndLabel(
+        current.weathercode,
+        isNight
+      );
+
+      document.getElementById("temp").textContent =
+        Math.round(current.temperature) + "°C";
+      document.getElementById("condition").textContent = iconData.label;
+      document.getElementById("icon").textContent = iconData.icon;
+
+      document.getElementById("tMin").textContent =
+        Math.round(tMin) + "°C";
+      document.getElementById("tMax").textContent =
+        Math.round(tMax) + "°C";
+
+      document.getElementById("wind").textContent =
+        Math.round(current.windspeed) + " km/h";
+      document.getElementById("windDir").textContent =
+        Math.round(current.winddirection) + "°";
+
+      document.getElementById("dateLabel").textContent =
+        "Météo du " + formatDateFR(now);
+
+      document.getElementById("tag1").textContent =
+        "Temps réel : " + iconData.label;
+      document.getElementById("tag2").textContent =
+        "Vent " + Math.round(current.windspeed) + " km/h";
+    }
+
+    function loadWeather() {
+      fetch(url)
+        .then((res) => res.json())
+        .then(updateWidget)
+        .catch((err) => {
+          console.error(err);
+          document.getElementById("condition").textContent =
+            "Météo indisponible";
+        });
+    }
+
+    loadWeather();
+    // rafraîchissement toutes les 15 minutes
+    setInterval(loadWeather, 15 * 60 * 1000);
+  </script>
+</body>
+</html>
